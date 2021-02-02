@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import tkinter as tk
-import belltower
+from belltower import *
 
 FONT_NAME = "TkDefaultFont"
 FONT_SIZE = 12
@@ -184,8 +184,12 @@ class Touch:
         self._cell_vars[user_id] = cell_var
         self._cells[user_id] = cell
 
-    def update(self, *args):
-        # Read the size
+    def _assignments_and_errors(self):
+        """
+        Returns a tuple of:
+        - A mapping between bells and user IDs
+        - A set of which user IDs have errors in their cells.
+        """
         size = int(self._size_var.get())
 
         # The set of cells which contain errors.  These cells will be highlighted red
@@ -211,6 +215,13 @@ class Touch:
                     assigned_users[bell].append(user_id)
                 else:
                     assigned_users[bell] = [user_id]
+
+        return (assigned_users, cells_with_errors)
+
+    def update(self, *args):
+        size = int(self._size_var.get())
+
+        assigned_users, cells_with_errors = self._assignments_and_errors()
 
         # Mark duplicate assignments as errors
         for b in assigned_users:
@@ -249,7 +260,23 @@ class Touch:
 
     def _on_load(self):
         print(f"Loading #{self._index + 1}: '{self._name_box.get()}'")
-
+        assigned_users, _cells_with_errors = self._assignments_and_errors()
+        # Convert the bell type string into a BellType value
+        bell_type_str = self._bellmode_var.get()
+        if bell_type_str == "Tower":
+            bell_type = TOWER_BELLS
+        else:
+            assert bell_type_str == "Hand"
+            bell_type = HAND_BELLS
+        # Set tower size and setting
+        tower = self._matrix.tower
+        tower.set_at_hand()
+        tower.set_size(int(self._size_var.get()))
+        tower.set_bell_type(bell_type)
+        # Assign users
+        tower.unassign_all()
+        for bell, _user_ids in assigned_users.items():
+            tower.assign(_user_ids[0], Bell.from_index(bell))
 
 class Matrix:
     """ The matrix between touches (left) and ringers (top) """
@@ -268,12 +295,12 @@ class Matrix:
         self.grid = self._panel.grid
 
         # ===== HANDLE RR CALLBACKS =====
-        self._tower = tower
-        self._tower.on_user_enter(self._on_user_enter)
-        self._tower.on_user_leave(self._on_user_leave)
+        self.tower = tower
+        self.tower.on_user_enter(self._on_user_enter)
+        self.tower.on_user_leave(self._on_user_leave)
 
         # Make sure that all the existing users appear in the list
-        for user_id, user_name in self._tower.all_users:
+        for user_id, user_name in self.tower.all_users:
             self._on_user_enter(user_id, user_name)
 
         # ===== TOP-LEFT CORNER BOX =====
@@ -302,7 +329,7 @@ class Matrix:
 
         self._tower_label = tk.Label(
             self._help_box,
-            text = f"Tower #{tower.tower_id}: {tower.tower_name}",
+            text = f"Tower #{self.tower.tower_id}: {self.tower.tower_name}",
             font = (FONT_NAME, FONT_SIZE)
         )
         self._tower_label.pack()
@@ -398,7 +425,7 @@ class Matrix:
 def main():
     print("Connecting to tower...")
 
-    tower = belltower.RingingRoomTower(963758214)
+    tower = RingingRoomTower(389217546)
 
     with tower:
         tower.wait_loaded()
