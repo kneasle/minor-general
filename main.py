@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import tkinter as tk
+import belltower
 
 FONT_NAME = "TkDefaultFont"
 FONT_SIZE = 12
@@ -38,13 +39,21 @@ def bell_num_from_name(name):
 class VLabel:
     """ A utility class that creates a label where the text goes upwards. """
 
-    def __init__(self, parent, text):
+    ENABLED_COLOR = "#000000"
+    DISABLED_COLOR = "#777777"
+
+    def __init__(self, parent, text, enabledness=True):
         self._parent = parent
         self._text = text
 
         # Create a canvas and a text element for the label
         self._canvas = tk.Canvas(self._parent, width=FONT_SIZE * 1.1, height=100)
-        self._text_elem = self._canvas.create_text(0, 0, font=FONT, text=self._text, angle=90)
+        self._text_elem = self._canvas.create_text(
+            0, 0,
+            font=FONT,
+            text=self._text,
+            angle=90,
+        )
 
         # Find out the size of the text, and make sure that the canvas encompasses the entire text
         # (therefore, layouting will do what we expect)
@@ -55,6 +64,15 @@ class VLabel:
         # Forward layout methods to the canvas widget
         self.pack = self._canvas.pack
         self.grid = self._canvas.grid
+
+        # Set the enabledness
+        self.set_enabledness(enabledness)
+
+    def set_enabledness(self, enabledness: bool):
+        self._canvas.itemconfig(
+            self._text_elem,
+            fill=self.ENABLED_COLOR if enabledness else self.DISABLED_COLOR
+        )
 
 
 class User:
@@ -67,9 +85,12 @@ class User:
     ROWS = 2
 
 
-    def __init__(self, parent, name):
+    def __init__(self, parent, user_id, name):
         self._parent = parent
+        self._user_id = user_id
         self._name = name
+
+        self._in_room = True
 
         self._vlabel = VLabel(self._parent, self._name)
         
@@ -78,9 +99,18 @@ class User:
         self.grid = self._vlabel.grid
 
     @property
+    def is_in_room(self):
+        return self._in_room
+
+    @property
     def name(self):
         """ The name of this user. """
         return self._name
+
+    def set_in_room(self, is_in_room):
+        self._in_room = is_in_room
+        self._vlabel.set_enabledness(is_in_room)
+
 
 class Touch:
     """ A single touch in the practice. """
@@ -102,13 +132,14 @@ class Touch:
     HAND = "Hand"
     BELL_MODES = [TOWER, HAND]
 
-    def __init__(self, parent, index):
+    def __init__(self, matrix, parent, index):
         self._parent = parent
+        self._matrix = matrix
         self._index = index
 
         # The cells of the document
-        self._cells = []
-        self._cell_vars = []
+        self._cells = {}
+        self._cell_vars = {}
 
         # ===== LHS ELEMENTS =====
 
@@ -116,11 +147,11 @@ class Touch:
         self._number = tk.Label(self._parent, text=str(self._index + 1))
         # A dropdown for the size of the tower
         self._size_var = tk.StringVar(self._parent, name=f"SizeVar {self._index + 1}", value="8")
-        self._size_var.trace("w", self._update)
+        self._size_var.trace("w", self.update)
         self._size_menu = tk.OptionMenu(self._parent, self._size_var, *self.SIZES)
         # A switch between towerbells and handbells
         self._bellmode_var = tk.StringVar(self._parent, value=self.TOWER)
-        self._bellmode_var.trace("w", self._update)
+        self._bellmode_var.trace("w", self.update)
         self._bellmode_menu = tk.OptionMenu(self._parent, self._bellmode_var, *self.BELL_MODES)
         # A button to load this touch into the room
         self._load_button = tk.Button(self._parent, text="Load", command=self._on_load)
@@ -140,20 +171,20 @@ class Touch:
         self._bells_left.grid(row = self._row, column = MAX_COLS, sticky = "w", padx = (10, 4))
 
         # Explicitly call an update to make sure that the display is initialised properly
-        self._update()
+        self.update()
 
-    def add_user(self, user):
+    def add_user(self, user_id, user):
         """ Adds a user to this touch as a new column. """
         cell_var = tk.StringVar(self._parent, value="")
-        cell_var.trace_add("write", self._update)
+        cell_var.trace_add("write", self.update)
 
         cell = tk.Entry(self._parent, width = 2, textvariable=cell_var)
         cell.grid(row = self._row, column = self.COLS + len(self._cells))
 
-        self._cell_vars.append(cell_var)
-        self._cells.append(cell)
+        self._cell_vars[user_id] = cell_var
+        self._cells[user_id] = cell
 
-    def _update(self, *args):
+    def update(self, *args):
         # Read the size
         size = int(self._size_var.get())
 
@@ -161,21 +192,25 @@ class Touch:
         cells_with_errors = set()
 
         # Figure out which bells are assigned to whom
-        # assigned_users maps **bells** to **users** (both of which are 0-indexed integers)
+        # assigned_users maps 0-indexed **bells** to **user_ids*
         assigned_users = {}
-        for i, v in enumerate(self._cell_vars):
+        for user_id, v in self._cell_vars.items():
             for c in v.get():
                 bell = bell_num_from_name(c)
                 # If the name was invalid or the bell is out of range, mark this cell as having
                 # errors and continue
                 if bell is None or bell < 0 or bell >= size:
-                    cells_with_errors.add(i)
+                    cells_with_errors.add(user_id)
+                    continue
+                # If bells are assigned to a user who's left the tower, then that's also an error
+                if not self._matrix.is_user_in_room(user_id):
+                    cells_with_errors.add(user_id)
                     continue
                 # Assign the bell to this user (but store existing assignments to show errors)
                 if bell in assigned_users:
-                    assigned_users[bell].append(i)
+                    assigned_users[bell].append(user_id)
                 else:
-                    assigned_users[bell] = [i]
+                    assigned_users[bell] = [user_id]
 
         # Mark duplicate assignments as errors
         for b in assigned_users:
@@ -185,7 +220,7 @@ class Touch:
                     cells_with_errors.add(u)
 
         # Update the cell highlighting and the enabledness of the button
-        for i, c in enumerate(self._cells):
+        for i, c in self._cells.items():
             c['background'] = 'red' if i in cells_with_errors else 'white'
         self._load_button['state'] = tk.NORMAL if len(cells_with_errors) == 0 else tk.DISABLED
         
@@ -219,17 +254,27 @@ class Touch:
 class Matrix:
     """ The matrix between touches (left) and ringers (top) """
 
-    def __init__(self, parent):
+    def __init__(self, parent, tower):
         # ===== INITIALISATION =====
         self._parent = parent
         self._panel = tk.Frame(self._parent)
 
-        self._users = []
+        # Users is a mapping between user ids (`int`s) and the User objects
+        self._users = {}
         self._touches = []
 
         # Forward layout methods to the panel
         self.pack = self._panel.pack
         self.grid = self._panel.grid
+
+        # ===== HANDLE RR CALLBACKS =====
+        self._tower = tower
+        self._tower.on_user_enter(self._on_user_enter)
+        self._tower.on_user_leave(self._on_user_leave)
+
+        # Make sure that all the existing users appear in the list
+        for user_id, user_name in self._tower.all_users:
+            self._on_user_enter(user_id, user_name)
 
         # ===== TOP-LEFT CORNER BOX =====
         self._help_box = tk.Frame(self._panel)
@@ -257,7 +302,7 @@ class Matrix:
 
         self._tower_label = tk.Label(
             self._help_box,
-            text="Tower #963758214: OUSCR",
+            text = f"Tower #{tower.tower_id}: {tower.tower_name}",
             font = (FONT_NAME, FONT_SIZE)
         )
         self._tower_label.pack()
@@ -292,11 +337,6 @@ class Matrix:
         self._headers = Touch.create_headings(self._panel)
         self._add_touch()
 
-        # Initially create some people.  TODO: Link this to RR
-        for n in ["Me", "The Ringing Rabbit", "Ringing Mummy", "Heather", "Katie", "Julia", "Jess",
-                  "Ali", "Josie", "Jon", "David"]:
-            self._add_user(n)
-
         # Create the plus button
         self._plus_button = tk.Button(
             self._panel,
@@ -306,21 +346,40 @@ class Matrix:
         )
         self._plus_button.grid(row = MAX_ROWS, column = 0, columnspan = MAX_COLS + 1)
 
+    def is_user_in_room(self, user_id):
+        if user_id in self._users:
+            return self._users[user_id].is_in_room
+
+    def _on_user_enter(self, user_id, user_name):
+        if user_id in self._users:
+            self._users[user_id].set_in_room(True)
+            # Update all the touches when a user returns to the tower
+            for t in self._touches:
+                t.update()
+        else:
+            self._add_user(user_id, user_name)
+
+    def _on_user_leave(self, user_id, user_name):
+        self._users[user_id].set_in_room(False)
+        # Update all the touches when a user leaves the tower
+        for t in self._touches:
+            t.update()
+
     def _add_touch(self):
         """ Adds another row to the touch list. """
-        new_touch = Touch(self._panel, len(self._touches))
+        new_touch = Touch(self, self._panel, len(self._touches))
         # Add all the existing users to the touch row
-        for u in self._users:
-            new_touch.add_user(u)
+        for u_id, user in self._users.items():
+            new_touch.add_user(u_id, user)
         # Add touch to list
         self._touches.append(new_touch)
 
-    def _add_user(self, user_name):
+    def _add_user(self, user_id, user_name):
         """
         Add a user to the practice.  This will be called as a callback for a user entering the
         practice.
         """
-        user = User(self._panel, user_name)
+        user = User(self._panel, user_id, user_name)
         user.grid(
             row = 0,
             column = Touch.COLS + len(self._users),
@@ -329,22 +388,30 @@ class Matrix:
             padx = 2,
             pady = (4, 2),
         )
-        self._users.append(user)
+        self._users[user_id] = user
 
         # Add this user to all the touches
         for t in self._touches:
-            t.add_user(user)
+            t.add_user(user_id, user)
 
 
 def main():
-    window = tk.Tk()
+    print("Connecting to tower...")
 
-    window.title("Minor General")
+    tower = belltower.RingingRoomTower(963758214)
 
-    matrix = Matrix(window)
-    matrix.pack()
+    with tower:
+        tower.wait_loaded()
 
-    window.mainloop()
+        print("Connected!")
+
+        window = tk.Tk()
+        window.title("Minor General")
+
+        matrix = Matrix(window, tower)
+        matrix.pack()
+
+        window.mainloop()
 
 if __name__ == "__main__":
     main()
