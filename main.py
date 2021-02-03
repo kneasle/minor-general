@@ -2,6 +2,7 @@
 
 import tkinter as tk
 from belltower import *
+import time
 
 FONT_NAME = "TkDefaultFont"
 FONT_SIZE = 12
@@ -13,6 +14,9 @@ MAX_COLS = 100
 
 
 BELL_NAMES = "1234567890ETABCD"
+
+
+ASSIGN_DELAY = 0.2
 
 
 class WrappingLabel(tk.Label):
@@ -261,6 +265,7 @@ class Touch:
     def _on_load(self):
         print(f"Loading #{self._index + 1}: '{self._name_box.get()}'")
         assigned_users, _cells_with_errors = self._assignments_and_errors()
+        new_size = int(self._size_var.get())
         # Convert the bell type string into a BellType value
         bell_type_str = self._bellmode_var.get()
         if bell_type_str == "Tower":
@@ -268,15 +273,28 @@ class Touch:
         else:
             assert bell_type_str == "Hand"
             bell_type = HAND_BELLS
+
         # Set tower size and setting
         tower = self._matrix.tower
         tower.set_at_hand()
-        tower.set_size(int(self._size_var.get()))
+        tower.set_size(new_size)
         tower.set_bell_type(bell_type)
         # Assign users
-        tower.unassign_all()
-        for bell, _user_ids in assigned_users.items():
-            tower.assign(_user_ids[0], Bell.from_index(bell))
+        for i in range(new_size):
+            bell = Bell.from_index(i)
+            user_ids = assigned_users.get(i)
+            if user_ids:
+                # Only re-assign the bell if needed
+                user_id = user_ids[0]
+                # Only assign bells if change is required
+                if user_id != tower.get_assignment(bell):
+                    time.sleep(ASSIGN_DELAY)
+                    tower.assign(user_id, bell)
+            else:
+                # If the bell should be unassigned, then unassign it only if currently assigned
+                if tower.get_assignment(bell) is not None:
+                    time.sleep(ASSIGN_DELAY)
+                    tower.unassign(bell)
 
 class Matrix:
     """ The matrix between touches (left) and ringers (top) """
@@ -425,7 +443,7 @@ class Matrix:
 def main():
     print("Connecting to tower...")
 
-    tower = RingingRoomTower(389217546)
+    tower = RingingRoomTower(963758214)
 
     with tower:
         tower.wait_loaded()
