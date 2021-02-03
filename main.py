@@ -138,7 +138,7 @@ class Touch:
     HAND = "Hand"
     BELL_MODES = [TOWER, HAND]
 
-    def __init__(self, matrix, parent, index):
+    def __init__(self, matrix, parent, index, touch_to_clone):
         self._parent = parent
         self._matrix = matrix
         self._index = index
@@ -152,11 +152,18 @@ class Touch:
         # A label for the number of the touch
         self._number = tk.Label(self._parent, text=str(self._index + 1))
         # A dropdown for the size of the tower
-        self._size_var = tk.StringVar(self._parent, name=f"SizeVar {self._index + 1}", value="8")
+        self._size_var = tk.StringVar(
+            self._parent,
+            name = f"SizeVar {self._index + 1}",
+            value = "8" if touch_to_clone is None else touch_to_clone._size_var.get()
+        )
         self._size_var.trace("w", self.update)
         self._size_menu = tk.OptionMenu(self._parent, self._size_var, *self.SIZES)
         # A switch between towerbells and handbells
-        self._bellmode_var = tk.StringVar(self._parent, value=self.TOWER)
+        self._bellmode_var = tk.StringVar(
+            self._parent,
+            value = self.TOWER if touch_to_clone is None else touch_to_clone._bellmode_var.get()
+        )
         self._bellmode_var.trace("w", self.update)
         self._bellmode_menu = tk.OptionMenu(self._parent, self._bellmode_var, *self.BELL_MODES)
         # A button to load this touch into the room
@@ -439,7 +446,8 @@ class Matrix:
             self._swap_buttons.append(new_swap_button)
 
         # Add a new touch
-        new_touch = Touch(self, self._panel, num_touches)
+        touch_to_clone = self._touches[-1] if self._touches != [] else None
+        new_touch = Touch(self, self._panel, num_touches, touch_to_clone)
         # Add all the existing users to the touch row
         for u_id, user in self._users.items():
             new_touch.add_user(u_id, user)
