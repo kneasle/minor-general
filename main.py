@@ -123,7 +123,9 @@ class Touch:
     The number of columns used up by the touch input.  Used to put the user columns in the right
     places on the screen.
     """
-    COLS = 5
+    COLS = 6
+    # Leave one column free for the move-touch arrows
+    LEFT_MARGIN = 1
 
     """
     The possible sizes that a RR tower can have.  We need these as strings so that they can be fed
@@ -163,11 +165,7 @@ class Touch:
         self._name_box = tk.Entry(self._parent)
 
         # Layout all the LHS elements
-        self._number.grid(row = self._row, column = 0, padx = 4)
-        self._size_menu.grid(row = self._row, column = 1)
-        self._bellmode_menu.grid(row = self._row, column = 2)
-        self._load_button.grid(row = self._row, column = 3)
-        self._name_box.grid(row = self._row, column = 4, padx = 20)
+        self._pack_elems()
 
         # ===== RHS ELEMENTS =====
 
@@ -176,6 +174,15 @@ class Touch:
 
         # Explicitly call an update to make sure that the display is initialised properly
         self.update()
+
+    def _pack_elems(self):
+        self._number.grid       (row = self._row, column = self.LEFT_MARGIN + 0, padx = 4)
+        self._size_menu.grid    (row = self._row, column = self.LEFT_MARGIN + 1)
+        self._bellmode_menu.grid(row = self._row, column = self.LEFT_MARGIN + 2)
+        self._load_button.grid  (row = self._row, column = self.LEFT_MARGIN + 3)
+        self._name_box.grid     (row = self._row, column = self.LEFT_MARGIN + 4, padx = 20)
+        for _u_id, (i, c) in self._cells.items():
+            c.grid(row = self._row, column = self.COLS + i)
 
     def add_user(self, user_id, user):
         """ Adds a user to this touch as a new column. """
@@ -186,7 +193,7 @@ class Touch:
         cell.grid(row = self._row, column = self.COLS + len(self._cells))
 
         self._cell_vars[user_id] = cell_var
-        self._cells[user_id] = cell
+        self._cells[user_id] = (len(self._cells), cell)
 
     def _assignments_and_errors(self):
         """
@@ -235,7 +242,7 @@ class Touch:
                     cells_with_errors.add(u)
 
         # Update the cell highlighting and the enabledness of the button
-        for i, c in self._cells.items():
+        for i, (_index, c) in self._cells.items():
             c['background'] = 'red' if i in cells_with_errors else 'white'
         self._load_button['state'] = tk.NORMAL if len(cells_with_errors) == 0 else tk.DISABLED
         
@@ -246,6 +253,11 @@ class Touch:
         else:
             text = ','.join([bell_name_from_num(b) for b in unassigned_bells])  + " left"
         self._bells_left['text'] = text
+
+    def set_index(self, new_index):
+        self._index = new_index
+        self._number.config(text = str(self._index + 1))
+        self._pack_elems()
 
     @property
     def _row(self):
@@ -259,7 +271,7 @@ class Touch:
             for i in ["Bells", "Mode", "", "Touch notes"]
         ]
         for i, h in enumerate(headers):
-            h.grid(row = User.ROWS - 1, column = 1 + i, sticky = "S")
+            h.grid(row = User.ROWS - 1, column = Touch.LEFT_MARGIN + 1 + i, sticky = "S")
         return headers
 
     def _on_load(self):
@@ -382,6 +394,8 @@ class Matrix:
         self._headers = Touch.create_headings(self._panel)
         self._add_touch()
 
+        # An array to store the buttons to swap touches
+        self._swap_buttons = []
         # Create the plus button
         self._plus_button = tk.Button(
             self._panel,
@@ -412,12 +426,32 @@ class Matrix:
 
     def _add_touch(self):
         """ Adds another row to the touch list. """
-        new_touch = Touch(self, self._panel, len(self._touches))
+        # If this isn't the first touch, then create a new swap button
+        num_touches = len(self._touches)
+        if num_touches > 0:
+            new_swap_button = tk.Button(
+                self._panel,
+                text = "^",
+                font = FONT,
+                command = lambda: self._swap_touches(num_touches - 1)
+            )
+            new_swap_button.grid(row = User.ROWS + num_touches, column = 0)
+            self._swap_buttons.append(new_swap_button)
+
+        # Add a new touch
+        new_touch = Touch(self, self._panel, num_touches)
         # Add all the existing users to the touch row
         for u_id, user in self._users.items():
             new_touch.add_user(u_id, user)
         # Add touch to list
         self._touches.append(new_touch)
+
+    def _swap_touches(self, i):
+        # Swap touches
+        self._touches[i], self._touches[i + 1] = self._touches[i + 1], self._touches[i]
+        # Update indices
+        self._touches[i].set_index(i)
+        self._touches[i + 1].set_index(i + 1)
 
     def _add_user(self, user_id, user_name):
         """
