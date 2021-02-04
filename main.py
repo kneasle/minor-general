@@ -2,12 +2,14 @@
 
 import tkinter as tk
 from belltower import *
+from tower_chooser import choose_tower
 import time
 
 FONT_NAME = "TkDefaultFont"
 FONT_SIZE = 12
-FONT = (FONT_NAME, FONT_SIZE)
 
+FONT = (FONT_NAME, FONT_SIZE)
+TITLE_FONT = (FONT_NAME, int(FONT_SIZE * 1.5), "bold")
 
 MAX_ROWS = 100
 MAX_COLS = 100
@@ -353,7 +355,7 @@ class Matrix:
         self._title = tk.Label(
             self._help_box,
             text="Minor General",
-            font = (FONT_NAME, int(FONT_SIZE * 1.5), 'bold')
+            font = TITLE_FONT
         )
         self._title.pack(pady = (5, 0))
 
@@ -483,10 +485,11 @@ class Matrix:
 
 
 def main():
+    tower = choose_tower("Minor General", FONT, TITLE_FONT)
+    if tower is None:
+        return -1
+
     print("Connecting to tower...")
-
-    tower = RingingRoomTower(963758214)
-
     with tower:
         tower.wait_loaded()
 
