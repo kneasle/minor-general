@@ -339,7 +339,7 @@ class Matrix:
         self.tower.on_user_leave(self._on_user_leave)
 
         # Make sure that all the existing users appear in the list
-        for user_id, user_name in self.tower.all_users:
+        for user_id, user_name in self.tower.all_users.items():
             self._on_user_enter(user_id, user_name)
 
         # ===== TOP-LEFT CORNER BOX =====
