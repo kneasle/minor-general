@@ -2,11 +2,8 @@ import tkinter as tk
 from belltower import RingingRoomTower
 from belltower.page_parsing import parse_page
 
-def choose_tower(
-    title = "Choose a RR tower!",
-    normal_font = ("TkDefaultFont", 12),
-    title_font = ("TkDefaultFont", 12, "bold")
-):
+def choose_tower(title = "Choose a RR tower!", normal_font = ("TkDefaultFont", 12),
+                 title_font = ("TkDefaultFont", 12, "bold")):
     """
     This function creates a window where the user can input the tower ID, returning a
     RingingRoomTower or None when the user has made their choice.
@@ -19,20 +16,23 @@ def choose_tower(
         """ Callback called whenever the user changes the tower ID. """
         tower_id = tower_id_var.get()
 
-        # Try to load the tower name from RR.  If this fails, then the tower does not exist
-        try:
-            _url, tower_name, _bell_type = parse_page(tower_id, "ringingroom.com")
-        except Exception:
-            tower_name = None
-
-        # Decide on what text to display, according to what the user wrote
-        if tower_name is None:
-            if tower_id == "":
-                text = "Tower names can't be blank"
-            else:
-                text = f"No tower found for {tower_id}"
+        # If the tower ID points to a valid tower, then this will be overwritten
+        tower_name = None
+        if tower_id == "":
+            text = "Tower IDs can't be blank"
+        elif len(tower_id) != 9:
+            text = "Tower IDs must have 9 digits"
         else:
-            text = f"Join '{tower_name}'?"
+            # Try to load the tower name from RR.  If this fails, then the tower does not exist
+            try:
+                _url, tower_name, _bell_type = parse_page(tower_id, "ringingroom.com")
+            except Exception:
+                pass
+            # Decide on what text to display, according to what the user wrote
+            if tower_name is None:
+                text = f"No tower found for {tower_id}"
+            else:
+                text = f"Join '{tower_name}'?"
         
         # Update the UI
         join_button['state'] = tk.DISABLED if tower_name is None else tk.NORMAL  
