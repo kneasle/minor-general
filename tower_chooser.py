@@ -2,8 +2,9 @@ import tkinter as tk
 from belltower import RingingRoomTower
 from belltower.page_parsing import parse_page
 
-def choose_tower(title = "Choose a RR tower!", normal_font = ("TkDefaultFont", 12),
-                 title_font = ("TkDefaultFont", 12, "bold")):
+
+def choose_tower(title="Choose a RR tower!", normal_font=("TkDefaultFont", 12),
+                 title_font=("TkDefaultFont", 12, "bold")):
     """
     This function creates a window where the user can input the tower ID, returning a
     RingingRoomTower or None when the user has made their choice.
@@ -33,9 +34,9 @@ def choose_tower(title = "Choose a RR tower!", normal_font = ("TkDefaultFont", 1
                 text = f"No tower found for {tower_id}"
             else:
                 text = f"Join '{tower_name}'?"
-        
+
         # Update the UI
-        join_button['state'] = tk.DISABLED if tower_name is None else tk.NORMAL  
+        join_button['state'] = tk.DISABLED if tower_name is None else tk.NORMAL
         tower_name_box['text'] = text
         tower_name_box['fg'] = "red" if tower_name is None else "black"
 
@@ -47,15 +48,15 @@ def choose_tower(title = "Choose a RR tower!", normal_font = ("TkDefaultFont", 1
     window = tk.Tk()
     window.title(title)
     # A title with the program name
-    title = tk.Label(window, text = title, font = title_font)
+    title = tk.Label(window, text=title, font=title_font)
     # Row for the tower ID box
     input_frame = tk.Frame(window)
-    enter_tower_id = tk.Label(input_frame, text = "Enter tower ID:", font = normal_font)
-    tower_id_var = tk.StringVar(window, value = "")
+    enter_tower_id = tk.Label(input_frame, text="Enter tower ID:", font=normal_font)
+    tower_id_var = tk.StringVar(window, value="")
     tower_id_var.trace_add("write", on_id_change)
     entry = tk.Entry(input_frame, textvariable=tower_id_var)
     # Box for either an error or the tower name
-    tower_name_box = tk.Label(window, text = "...", font = normal_font)
+    tower_name_box = tk.Label(window, text="...", font=normal_font)
     # Row for the buttons
     cancel_join_label = tk.Frame(window)
     cancel_button = tk.Button(cancel_join_label, text="Cancel", font=normal_font,
@@ -64,12 +65,12 @@ def choose_tower(title = "Choose a RR tower!", normal_font = ("TkDefaultFont", 1
 
     title.pack()
     input_frame.pack()
-    enter_tower_id.grid(row = 0, column = 0)
-    entry.grid(row = 0, column = 1)
+    enter_tower_id.grid(row=0, column=0)
+    entry.grid(row=0, column=1)
     tower_name_box.pack()
     cancel_join_label.pack()
-    cancel_button.grid(row = 0, column = 0)
-    join_button.grid(row = 0, column = 1)
+    cancel_button.grid(row=0, column=0)
+    join_button.grid(row=0, column=1)
 
     # Cause an update so that everything gets initialised
     on_id_change()

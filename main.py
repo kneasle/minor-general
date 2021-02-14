@@ -23,6 +23,7 @@ ASSIGN_DELAY = 0.2
 
 class WrappingLabel(tk.Label):
     """ A type of Label that automatically adjusts the wrap to the size """
+
     def __init__(self, master=None, **kwargs):
         tk.Label.__init__(self, master, **kwargs)
         self.bind('<Configure>', lambda e: self.config(wraplength=self.winfo_reqwidth()))
@@ -66,7 +67,7 @@ class VLabel:
         x1, y1, x2, y2 = self._canvas.bbox(self._text_elem)
         self._canvas.move(self._text_elem, -x1, -y1)
         self._canvas.config(width=x2 - x1, height=y2 - y1)
-        
+
         # Forward layout methods to the canvas widget
         self.pack = self._canvas.pack
         self.grid = self._canvas.grid
@@ -90,7 +91,6 @@ class User:
     """
     ROWS = 2
 
-
     def __init__(self, parent, user_id, name):
         self._parent = parent
         self._user_id = user_id
@@ -99,7 +99,7 @@ class User:
         self._in_room = True
 
         self._vlabel = VLabel(self._parent, self._name)
-        
+
         # Forward layout methods to the canvas widget
         self.pack = self._vlabel.pack
         self.grid = self._vlabel.grid
@@ -156,15 +156,15 @@ class Touch:
         # A dropdown for the size of the tower
         self._size_var = tk.StringVar(
             self._parent,
-            name = f"SizeVar {self._index + 1}",
-            value = "8" if touch_to_clone is None else touch_to_clone._size_var.get()
+            name=f"SizeVar {self._index + 1}",
+            value="8" if touch_to_clone is None else touch_to_clone._size_var.get()
         )
         self._size_var.trace("w", self.update)
         self._size_menu = tk.OptionMenu(self._parent, self._size_var, *self.SIZES)
         # A switch between towerbells and handbells
         self._bellmode_var = tk.StringVar(
             self._parent,
-            value = self.TOWER if touch_to_clone is None else touch_to_clone._bellmode_var.get()
+            value=self.TOWER if touch_to_clone is None else touch_to_clone._bellmode_var.get()
         )
         self._bellmode_var.trace("w", self.update)
         self._bellmode_menu = tk.OptionMenu(self._parent, self._bellmode_var, *self.BELL_MODES)
@@ -184,22 +184,22 @@ class Touch:
         self.update()
 
     def _pack_elems(self):
-        self._number.grid       (row = self._row, column = self.LEFT_MARGIN + 0, padx = 4)
-        self._size_menu.grid    (row = self._row, column = self.LEFT_MARGIN + 1)
-        self._bellmode_menu.grid(row = self._row, column = self.LEFT_MARGIN + 2)
-        self._load_button.grid  (row = self._row, column = self.LEFT_MARGIN + 3)
-        self._name_box.grid     (row = self._row, column = self.LEFT_MARGIN + 4, padx = 20)
+        self._number.grid       (row=self._row, column=self.LEFT_MARGIN + 0, padx=4)
+        self._size_menu.grid    (row=self._row, column=self.LEFT_MARGIN + 1)
+        self._bellmode_menu.grid(row=self._row, column=self.LEFT_MARGIN + 2)
+        self._load_button.grid  (row=self._row, column=self.LEFT_MARGIN + 3)
+        self._name_box.grid     (row=self._row, column=self.LEFT_MARGIN + 4, padx=20)
         for _u_id, (i, c) in self._cells.items():
-            c.grid(row = self._row, column = self.COLS + i)
-        self._bells_left.grid(row = self._row, column = MAX_COLS, sticky = "w", padx = (10, 4))
+            c.grid(row=self._row, column=self.COLS + i)
+        self._bells_left.grid(row=self._row, column=MAX_COLS, sticky="w", padx=(10, 4))
 
     def add_user(self, user_id, user):
         """ Adds a user to this touch as a new column. """
         cell_var = tk.StringVar(self._parent, value="")
         cell_var.trace_add("write", self.update)
 
-        cell = tk.Entry(self._parent, width = 2, textvariable=cell_var)
-        cell.grid(row = self._row, column = self.COLS + len(self._cells))
+        cell = tk.Entry(self._parent, width=2, textvariable=cell_var)
+        cell.grid(row=self._row, column=self.COLS + len(self._cells))
 
         self._cell_vars[user_id] = cell_var
         self._cells[user_id] = (len(self._cells), cell)
@@ -254,18 +254,18 @@ class Touch:
         for i, (_index, c) in self._cells.items():
             c['background'] = 'red' if i in cells_with_errors else 'white'
         self._load_button['state'] = tk.NORMAL if len(cells_with_errors) == 0 else tk.DISABLED
-        
+
         # Find which bells are unassigned, and update the readout
         unassigned_bells = [b for b in range(size) if b not in assigned_users]
         if len(unassigned_bells) == 0:
             text = ''
         else:
-            text = ','.join([bell_name_from_num(b) for b in unassigned_bells])  + " left"
+            text = ','.join([bell_name_from_num(b) for b in unassigned_bells]) + " left"
         self._bells_left['text'] = text
 
     def set_index(self, new_index):
         self._index = new_index
-        self._number.config(text = str(self._index + 1))
+        self._number.config(text=str(self._index + 1))
         self._pack_elems()
 
     @property
@@ -280,7 +280,7 @@ class Touch:
             for i in ["Bells", "Mode", "", "Touch notes"]
         ]
         for i, h in enumerate(headers):
-            h.grid(row = User.ROWS - 1, column = Touch.LEFT_MARGIN + 1 + i, sticky = "S")
+            h.grid(row=User.ROWS - 1, column=Touch.LEFT_MARGIN + 1 + i, sticky="S")
         return headers
 
     def _on_load(self):
@@ -317,6 +317,7 @@ class Touch:
                     time.sleep(ASSIGN_DELAY)
                     tower.unassign(bell)
 
+
 class Matrix:
     """ The matrix between touches (left) and ringers (top) """
 
@@ -345,36 +346,36 @@ class Matrix:
         # ===== TOP-LEFT CORNER BOX =====
         self._help_box = tk.Frame(self._panel)
         self._help_box.grid(
-            row = 0,
-            column = 0,
-            rowspan = User.ROWS - 1,
-            columnspan = Touch.COLS,
-            sticky = "NESW"
+            row=0,
+            column=0,
+            rowspan=User.ROWS - 1,
+            columnspan=Touch.COLS,
+            sticky="NESW"
         )
 
         self._title = tk.Label(
             self._help_box,
             text="Minor General",
-            font = TITLE_FONT
+            font=TITLE_FONT
         )
-        self._title.pack(pady = (5, 0))
+        self._title.pack(pady=(5, 0))
 
         self._desc = tk.Label(
             self._help_box,
             text="Run extremely efficient Ringing Room practices.",
-            font = (FONT_NAME, FONT_SIZE, 'italic')
+            font=(FONT_NAME, FONT_SIZE, 'italic')
         )
         self._desc.pack()
 
         self._tower_label = tk.Label(
             self._help_box,
-            text = f"Tower #{self.tower.tower_id}: {self.tower.tower_name}",
-            font = (FONT_NAME, FONT_SIZE)
+            text=f"Tower #{self.tower.tower_id}: {self.tower.tower_name}",
+            font=(FONT_NAME, FONT_SIZE)
         )
         self._tower_label.pack()
 
         self._help_block = tk.Frame(self._help_box)
-        self._help_block.pack(expand = True, fill = tk.X, pady = 7, padx = 5)
+        self._help_block.pack(expand=True, fill=tk.X, pady=7, padx=5)
 
         # Generate the lines of the help box
         help_lines = [
@@ -390,11 +391,11 @@ class Matrix:
         for l in help_lines:
             label = WrappingLabel(
                 self._help_block,
-                text = '- ' + l,
-                font = (FONT_NAME, int(FONT_SIZE * .75)),
-                anchor = "w"
+                text='- ' + l,
+                font=(FONT_NAME, int(FONT_SIZE * .75)),
+                anchor="w"
             )
-            label.pack(expand = True, fill = tk.X)
+            label.pack(expand=True, fill=tk.X)
             self._help_labels.append(label)
 
         # ===== INITIALISE THE TABLE =====
@@ -408,11 +409,11 @@ class Matrix:
         # Create the plus button
         self._plus_button = tk.Button(
             self._panel,
-            text = '+',
-            font = FONT,
-            command = self._add_touch
+            text='+',
+            font=FONT,
+            command=self._add_touch
         )
-        self._plus_button.grid(row = MAX_ROWS, column = 0, columnspan = MAX_COLS + 1)
+        self._plus_button.grid(row=MAX_ROWS, column=0, columnspan=MAX_COLS + 1)
 
     def is_user_in_room(self, user_id):
         if user_id in self._users:
@@ -440,11 +441,11 @@ class Matrix:
         if num_touches > 0:
             new_swap_button = tk.Button(
                 self._panel,
-                text = "^",
-                font = FONT,
-                command = lambda: self._swap_touches(num_touches - 1)
+                text="^",
+                font=FONT,
+                command=lambda: self._swap_touches(num_touches - 1)
             )
-            new_swap_button.grid(row = User.ROWS + num_touches, column = 0)
+            new_swap_button.grid(row=User.ROWS + num_touches, column=0)
             self._swap_buttons.append(new_swap_button)
 
         # Add a new touch
@@ -470,12 +471,12 @@ class Matrix:
         """
         user = User(self._panel, user_id, user_name)
         user.grid(
-            row = 0,
-            column = Touch.COLS + len(self._users),
-            rowspan = User.ROWS,
-            sticky = "S",
-            padx = 2,
-            pady = (4, 2),
+            row=0,
+            column=Touch.COLS + len(self._users),
+            rowspan=User.ROWS,
+            sticky="S",
+            padx=2,
+            pady=(4, 2),
         )
         self._users[user_id] = user
 
@@ -502,6 +503,7 @@ def main():
         matrix.pack()
 
         window.mainloop()
+
 
 if __name__ == "__main__":
     main()
