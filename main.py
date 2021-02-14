@@ -173,13 +173,12 @@ class Touch:
         # An otherwise-useless textbox for the user to put the touch names
         self._name_box = tk.Entry(self._parent)
 
-        # Layout all the LHS elements
-        self._pack_elems()
-
         # ===== RHS ELEMENTS =====
 
         self._bells_left = tk.Label(self._parent, text="<bells left label>")
-        self._bells_left.grid(row = self._row, column = MAX_COLS, sticky = "w", padx = (10, 4))
+
+        # Layout all the LHS elements
+        self._pack_elems()
 
         # Explicitly call an update to make sure that the display is initialised properly
         self.update()
@@ -192,6 +191,7 @@ class Touch:
         self._name_box.grid     (row = self._row, column = self.LEFT_MARGIN + 4, padx = 20)
         for _u_id, (i, c) in self._cells.items():
             c.grid(row = self._row, column = self.COLS + i)
+        self._bells_left.grid(row = self._row, column = MAX_COLS, sticky = "w", padx = (10, 4))
 
     def add_user(self, user_id, user):
         """ Adds a user to this touch as a new column. """
