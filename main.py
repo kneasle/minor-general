@@ -140,10 +140,11 @@ class Touch:
     HAND = "Hand"
     BELL_MODES = [TOWER, HAND]
 
-    def __init__(self, matrix, parent, index, touch_to_clone):
+    def __init__(self, matrix, parent, index, _id, touch_to_clone):
         self._parent = parent
         self._matrix = matrix
         self._index = index
+        self._id = _id
 
         # The cells of the document
         self._cells = {}
@@ -295,11 +296,18 @@ class Touch:
             assert bell_type_str == "Hand"
             bell_type = HAND_BELLS
 
+        # Reassign all bells if we're changing the touch
+        should_unassign_all = (self._id != self._matrix.last_assigned_touch_id)
+        self._matrix.last_assigned_touch_id = self._id
+        print(should_unassign_all)
         # Set tower size and setting
         tower = self._matrix.tower
         tower.set_at_hand()
         tower.set_size(new_size)
         tower.set_bell_type(bell_type)
+        # Unassign all if needed
+        if should_unassign_all:
+            tower.unassign_all()
         # Assign users
         for i in range(new_size):
             bell = Bell.from_index(i)
@@ -307,13 +315,14 @@ class Touch:
             if user_ids:
                 # Only re-assign the bell if needed
                 user_id = user_ids[0]
-                # Only assign bells if change is required
-                if user_id != tower.get_assignment(bell):
+                # Only assign bells if change is required (in the case of unassigning all, we force
+                # through this change, in case the Tower's internal state hasn't updated)
+                if should_unassign_all or user_id != tower.get_assignment(bell):
                     time.sleep(ASSIGN_DELAY)
                     tower.assign(user_id, bell)
             else:
                 # If the bell should be unassigned, then unassign it only if currently assigned
-                if tower.get_assignment(bell) is not None:
+                if not should_unassign_all and tower.get_assignment(bell) is not None:
                     time.sleep(ASSIGN_DELAY)
                     tower.unassign(bell)
 
@@ -329,6 +338,8 @@ class Matrix:
         # Users is a mapping between user ids (`int`s) and the User objects
         self._users = {}
         self._touches = []
+        self._next_touch_id = 0
+        self.last_assigned_touch_id = None
 
         # Forward layout methods to the panel
         self.pack = self._panel.pack
@@ -448,9 +459,12 @@ class Matrix:
             new_swap_button.grid(row=User.ROWS + num_touches, column=0)
             self._swap_buttons.append(new_swap_button)
 
+        # Generate a new ID for this touch
+        new_id = self._next_touch_id
+        self._next_touch_id += 1
         # Add a new touch
         touch_to_clone = self._touches[-1] if self._touches != [] else None
-        new_touch = Touch(self, self._panel, num_touches, touch_to_clone)
+        new_touch = Touch(self, self._panel, num_touches, new_id, touch_to_clone)
         # Add all the existing users to the touch row
         for u_id, user in self._users.items():
             new_touch.add_user(u_id, user)
