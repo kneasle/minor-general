@@ -37,7 +37,7 @@ def bell_name_from_num(num):
 def bell_num_from_name(name):
     """ Gets the bell name from a given 0-indexed number. """
     assert len(name) == 1
-    if name in BELL_NAMES:
+    if name.upper() in BELL_NAMES:
         return BELL_NAMES.index(name.upper())
     else:
         return None
