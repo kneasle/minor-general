@@ -125,7 +125,7 @@ class Touch:
     The number of columns used up by the touch input.  Used to put the user columns in the right
     places on the screen.
     """
-    COLS = 6
+    COLS = 7
     # Leave one column free for the move-touch arrows
     LEFT_MARGIN = 1
 
@@ -169,6 +169,10 @@ class Touch:
         )
         self._bellmode_var.trace("w", self.update)
         self._bellmode_menu = tk.OptionMenu(self._parent, self._bellmode_var, *self.BELL_MODES)
+        # A toggle for touches which have been rung
+        self._done_var = tk.IntVar(self._parent, value=0)
+        self._done_var.trace("w", self._update_doneness)
+        self._done_toggle = tk.Checkbutton(self._parent, variable=self._done_var)
         # A button to load this touch into the room
         self._load_button = tk.Button(self._parent, text="Load", command=self._on_load)
         # An otherwise-useless textbox for the user to put the touch names
@@ -189,7 +193,8 @@ class Touch:
         self._size_menu.grid    (row=self._row, column=self.LEFT_MARGIN + 1)
         self._bellmode_menu.grid(row=self._row, column=self.LEFT_MARGIN + 2)
         self._load_button.grid  (row=self._row, column=self.LEFT_MARGIN + 3)
-        self._name_box.grid     (row=self._row, column=self.LEFT_MARGIN + 4, padx=20)
+        self._done_toggle.grid  (row=self._row, column=self.LEFT_MARGIN + 4)
+        self._name_box.grid     (row=self._row, column=self.LEFT_MARGIN + 5, padx=20)
         for _u_id, (i, c) in self._cells.items():
             c.grid(row=self._row, column=self.COLS + i)
         self._bells_left.grid(row=self._row, column=MAX_COLS, sticky="w", padx=(10, 4))
@@ -264,6 +269,9 @@ class Touch:
             text = ','.join([bell_name_from_num(b) for b in unassigned_bells]) + " left"
         self._bells_left['text'] = text
 
+    def _update_doneness(self, *args):
+        self._name_box.config(bg="#4a4" if self._done_var.get() == 1 else "white")
+
     def set_index(self, new_index):
         self._index = new_index
         self._number.config(text=str(self._index + 1))
@@ -278,7 +286,7 @@ class Touch:
     def create_headings(cls, parent):
         headers = [
             tk.Label(parent, text=i, font=(FONT_NAME, FONT_SIZE, "bold"))
-            for i in ["Bells", "Mode", "", "Touch notes"]
+            for i in ["Bells", "Mode", "", "Done", "Touch notes"]
         ]
         for i, h in enumerate(headers):
             h.grid(row=User.ROWS - 1, column=Touch.LEFT_MARGIN + 1 + i, sticky="S")
@@ -286,6 +294,9 @@ class Touch:
 
     def _on_load(self):
         print(f"Loading #{self._index + 1}: '{self._name_box.get()}'")
+        # If we load a touch, then automatically flag it as done
+        self._done_var.set(1)
+        # ===== READ ALL THE REQUIRED VALUES =====
         assigned_users, _cells_with_errors = self._assignments_and_errors()
         new_size = int(self._size_var.get())
         # Convert the bell type string into a BellType value
@@ -296,6 +307,7 @@ class Touch:
             assert bell_type_str == "Hand"
             bell_type = HAND_BELLS
 
+        # ===== UPDATE RINGING ROOM =====
         # Reassign all bells if we're changing the touch
         should_unassign_all = (self._id != self._matrix.last_assigned_touch_id)
         self._matrix.last_assigned_touch_id = self._id
