@@ -1,0 +1,23 @@
+name: PyInstaller Windows Build
+
+# Run whenever a release is created
+on:
+  release:
+    types: [created]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    # Steps represent a sequence of tasks that will be executed as part of the job
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v2
+      
+      - name: Create PyInstaller Package
+        uses: JackMcKew/pyinstaller-action-windows@main
+        with:
+          path: .
+          
+      - name: Debug file format
+        run: tree
