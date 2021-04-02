@@ -1,7 +1,10 @@
 **/__pycache__/
 dist/
-build/
+build/*
 **/*.spec
+!build/minorgeneral.spec
+!build/build_windows.cmd
+!build/requirements.txt
 bin/
 lib/
 pyvenv.cfg
