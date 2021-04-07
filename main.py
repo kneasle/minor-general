@@ -14,6 +14,11 @@ TITLE_FONT = (FONT_NAME, int(FONT_SIZE * 1.5), "bold")
 MAX_ROWS = 100
 MAX_COLS = 100
 
+COL_ERROR = "#e3867d"
+COL_FG = "#000000"
+COL_BG = "#ffffff"
+COL_FADE = "#777777"
+COL_DONE = "#7de39c"
 
 BELL_NAMES = "1234567890ETABCD"
 
@@ -46,9 +51,6 @@ def bell_num_from_name(name):
 class VLabel:
     """ A utility class that creates a label where the text goes upwards. """
 
-    ENABLED_COLOR = "#000000"
-    DISABLED_COLOR = "#777777"
-
     def __init__(self, parent, text, enabledness=True):
         self._parent = parent
         self._text = text
@@ -78,7 +80,7 @@ class VLabel:
     def set_enabledness(self, enabledness: bool):
         self._canvas.itemconfig(
             self._text_elem,
-            fill=self.ENABLED_COLOR if enabledness else self.DISABLED_COLOR
+            fill=COL_FG if enabledness else COL_FADE
         )
 
 
@@ -258,7 +260,7 @@ class Touch:
 
         # Update the cell highlighting and the enabledness of the button
         for i, (_index, c) in self._cells.items():
-            c['background'] = 'red' if i in cells_with_errors else 'white'
+            c['background'] = COL_ERROR if i in cells_with_errors else COL_BG
         self._load_button['state'] = tk.NORMAL if len(cells_with_errors) == 0 else tk.DISABLED
 
         # Find which bells are unassigned, and update the readout
@@ -270,7 +272,7 @@ class Touch:
         self._bells_left['text'] = text
 
     def _update_doneness(self, *args):
-        self._name_box.config(bg="#4a4" if self._done_var.get() == 1 else "white")
+        self._name_box.config(bg=COL_DONE if self._done_var.get() == 1 else COL_BG)
 
     def set_index(self, new_index):
         self._index = new_index
